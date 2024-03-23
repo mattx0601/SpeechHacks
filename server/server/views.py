@@ -12,9 +12,10 @@ args = TTSettings(num_beams=5, min_length=1)
 
 ALLOWED_EXTENSIONS = {'mp3', 'wav', 'ogg', 'flac', 'aac'}
 
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+def file_extension(filename):
+    if '.' in filename:
+        return filename.rsplit('.', 1)[1].lower()
+    return ''
 
 @csrf_exempt
 def index(request):
@@ -23,25 +24,30 @@ def index(request):
 @csrf_exempt
 def upload_file(request):
     if request.method == 'POST':
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         file = request.FILES.get('file')
+
+        file_ext = file_extension(file.name)
         if not file:
             return JsonResponse({'error': 'No file part'}, status=400)
-        
         if file.name == '':
             return JsonResponse({'error': 'No selected file'}, status=400)
+        
+        file_path = os.path.join(project_root, "uploads", file.name)
+        try:
+            audio = AudioSegment.from_file(file_path, format=file_ext)
+            wav_audio_file = os.path.join(project_root, "uploads", "converted_audio.wav")
+            audio.export(wav_audio_file, format="wav")
 
-        if allowed_file(file.name):
-            filename = file.name
-            file_path = os.path.join(settings.MEDIA_ROOT, filename)
-            with open(file_path, 'wb+') as destination:
-                for chunk in file.chunks():
-                    destination.write(chunk)
+            spoken = speech_to_text_pipe(wav_audio_file, generate_kwargs={"language": "english"})
+            
+            corrected = grammar_correction_pipe.generate_text(spoken["text"], args=args)
 
-            # Perform speech recognition on the uploaded file
-            file_path = os.path.join(settings.MEDIA_ROOT, filename)
-            retVal = speech_to_text_pipe(file_path)
+            return JsonResponse({'message': corrected.text})
+        except:
+            return JsonResponse({'error': 'File type not allowed'}, status=400)
 
-            return JsonResponse({'message': retVal})
+            
         else:
             return JsonResponse({'error': 'File type not allowed'}, status=400)
     else:
