@@ -23,6 +23,7 @@ def index(request):
 
 @csrf_exempt
 def upload_file(request):
+    # For POST methods only
     if request.method == 'POST':
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         file = request.FILES.get('file')
@@ -39,11 +40,13 @@ def upload_file(request):
             wav_audio_file = os.path.join(project_root, "uploads", "converted_audio.wav")
             audio.export(wav_audio_file, format="wav")
 
+            #  Perform speech recognition on the uploaded file
             spoken = speech_to_text_pipe(wav_audio_file, generate_kwargs={"language": "english"})
             
+            # Perform grammar correction on the recognized speech
             corrected = grammar_correction_pipe.generate_text(spoken["text"], args=args)
 
-            return JsonResponse({'message': corrected.text})
+            return correction(spoken["text"], corrected.text) # JsonResponse({'message': corrected.text})
         except:
             return JsonResponse({'error': 'File type not allowed'}, status=400)
 
@@ -52,6 +55,29 @@ def upload_file(request):
             return JsonResponse({'error': 'File type not allowed'}, status=400)
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def correction(original, corrected):
+    original_arr = original.split(".")
+    corrected_arr = corrected.split(".")
+    corrections_dict = {
+        "count": 0,
+        "originaltext": original,
+        "correctedtext": corrected,
+    }
+
+    res_index = []
+    for idx, sentence in enumerate(original_arr):
+        if (corrected_arr[idx] != sentence):
+            res_index.append(idx)
+
+    corrections_dict['count'] = len(res_index)
+    
+    for idx, corr_idx in enumerate(res_index):
+        corrections_dict[f"{idx + 1}"] = {
+            "original": original_arr[corr_idx],
+            "corrected": corrected_arr[corr_idx]
+        }
+    return JsonResponse(corrections_dict)
 
 def test_audio(request):
     # Hard coded file for now
@@ -70,12 +96,33 @@ def test_audio(request):
 
     return JsonResponse({'message': corrected.text})
 
+dict = {
+    "count": 0,
+    "originaltext": "",
+    "correctedtext": "",
+    
+}
+
 def test_grammar(request):
     # Hard coded file for now
     # Perform grammar correction on the recognized speech
-    corrected = grammar_correction_pipe.generate_text("Many peoples love their country. They're very patriotic.", args=args)
+    test = "Many peoples love their country. They're very patriotic."
+    testarr = test.split(".")
+    corrected = (grammar_correction_pipe.generate_text(test, args=args))
+    correctedarr = corrected.text.split(".")
+    res_index = [];
+    for idx, sentence in enumerate(testarr):
+        if (correctedarr[idx] != sentence):
+            res_index.append(idx)
 
-    print(corrected.text)
-    return JsonResponse({'message': corrected.text})
+    dict['count'] = len(res_index)
+    dict['originaltext'] = test
+    dict['correctedtext'] = corrected.text
 
+    for idx, corr_idx in enumerate(res_index):
+        dict[f"{idx + 1}"] = {
+            "original": testarr[corr_idx],
+            "corrected": correctedarr[corr_idx]
+        }
+    return JsonResponse(dict)
 # TODO etc
