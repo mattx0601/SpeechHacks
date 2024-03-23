@@ -128,10 +128,31 @@ def test_grammar(request):
     for idx, sentence in enumerate(testarr):
         if (correctedarr[idx] != sentence):
             res_index.append(idx)
-
+        
     dict['count'] = len(res_index)
     dict['originaltext'] = test
     dict['correctedtext'] = corrected.text
+    for idx, corr_idx in enumerate(res_index):
+        dict[f"{idx + 1}"] = {
+            "original": testarr[corr_idx],
+            "corrected": correctedarr[corr_idx]
+        }
+    return JsonResponse(dict)
+
+"""
+{
+    "count": 1,
+    "originaltext": ...,
+    "correctedtext": ...,
+    "1": { 
+        "original": ...,
+        "corrected": ...,
+     }
+     ...
+
+}
+
+"""
 
     for idx, corr_idx in enumerate(res_index):
         dict[f"{idx + 1}"] = {
