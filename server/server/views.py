@@ -64,12 +64,49 @@ def test_audio(request):
 
     return JsonResponse({'message': corrected.text})
 
+
+dict = {
+    "count": 0,
+    "originaltext": "",
+    "correctedtext": "",
+    
+}
+
 def test_grammar(request):
     # Hard coded file for now
     # Perform grammar correction on the recognized speech
-    corrected = grammar_correction_pipe.generate_text("Many peoples love their country. They're very patriotic.", args=args)
+    test = "Many peoples love their country. They're very patriotic."
+    testarr = test.split(".")
+    corrected = (grammar_correction_pipe.generate_text(test, args=args))
+    correctedarr = corrected.text.split(".")
+    res_index = [];
+    for idx, sentence in enumerate(testarr):
+        if (correctedarr[idx] != sentence):
+            res_index.append(idx)
+        
+    dict['count'] = len(res_index)
+    dict['originaltext'] = test
+    dict['correctedtext'] = corrected.text
+    for idx, corr_idx in enumerate(res_index):
+        dict[f"{idx + 1}"] = {
+            "original": testarr[corr_idx],
+            "corrected": correctedarr[corr_idx]
+        }
+    return JsonResponse(dict)
 
-    print(corrected.text)
-    return JsonResponse({'message': corrected.text})
+"""
+{
+    "count": 1,
+    "originaltext": ...,
+    "correctedtext": ...,
+    "1": { 
+        "original": ...,
+        "corrected": ...,
+     }
+     ...
+
+}
+
+"""
 
 # TODO etc
