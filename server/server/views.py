@@ -5,9 +5,21 @@ import os
 from transformers import pipeline
 from happytransformer import HappyTextToText, TTSettings
 from pydub import AudioSegment
+from openai import OpenAI 
+from pathlib import Path
+from dotenv import load_dotenv 
+load_dotenv()
 
+client = OpenAI()
+
+user_dict = {
+    "0" : [],
+    "1" : [],
+}
 speech_to_text_pipe = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3")
 grammar_correction_pipe = HappyTextToText("T5", "vennify/t5-base-grammar-correction")
+text_to_speech_pipe = pipeline("text2text-generation", model ="lmsys/fastchat-t5-3b-v1.0")
+
 args = TTSettings(num_beams=5, min_length=1)
 
 ALLOWED_EXTENSIONS = {'mp3', 'wav', 'ogg', 'flac', 'aac'}
@@ -161,3 +173,62 @@ def test_grammar(request):
         }
     return JsonResponse(dict)
 # TODO etc
+
+def gpt_conversation(user_input, user_id):
+    """Handles a single turn of conversation with ChatGPT, maintaining context."""
+    user_dict[user_id].append(user_input)
+
+    prompt =  "Respond to the conversation as a normal everyday passing human named Server and keep the conversation going \n"
+    if len(user_dict[user_id]) <= 3:
+        index = 0
+        for message in user_dict[user_id]:
+            if index % 2 == 0:
+                prompt += f"Server: {message}\n"
+            else:
+                prompt += f"User: {message}\n"
+            index +=1
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",  # Adjust the model as needed
+            messages=[{"role": "system", "content": prompt}]
+        )
+        if "Server:" in response.choices[0].message.content:
+            chatgpt_response = (response.choices[0].message.content)[8:]
+        elif "User:" in response.choices[0].message.content:
+            chatgpt_response = (response.choices[0].message.content)[6:]
+        else: 
+            chatgpt_response = (response.choices[0].message.content)
+        user_dict[user_id].append(chatgpt_response)
+
+        return chatgpt_response
+    else:
+        index = len(user_dict[user_id]) - 4
+        for message in user_dict[user_id][-3:]:
+            if index % 2 == 0:
+                prompt += f"Server: {message}\n"
+            else:
+                prompt += f"User: {message}\n"
+            index +=1
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",  # Adjust the model as needed
+            messages=[{"role": "system", "content": prompt}]
+        )
+        if "Server:" in response.choices[0].message.content:
+            chatgpt_response = (response.choices[0].message.content)[8:]
+        elif "User:" in response.choices[0].message.content:
+            chatgpt_response = (response.choices[0].message.content)[6:]
+        else:
+            chatgpt_response = (response.choices[0].message.content) # Server: I am well.
+        user_dict[user_id].append(chatgpt_response)
+
+        return chatgpt_response
+    
+def text_to_audio(text):
+    speech_file_path = Path(__file__).parent / "speech.mp3"
+    response = client.audio.speech.create(
+        model="tts-1",
+        voice="alloy",
+        input=text
+    )
+
+    response.with_streaming_response.method(speech_file_path)
+    return speech_file_path
