@@ -22,7 +22,7 @@ def index(request):
     return JsonResponse({'message': 'Hello, world!'})
 
 @csrf_exempt
-def upload_file(request):
+def upload_file(request,  user_id=None ):
     # For POST methods only
     if request.method == 'POST':
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -46,7 +46,7 @@ def upload_file(request):
             # Perform grammar correction on the recognized speech
             corrected = grammar_correction_pipe.generate_text(spoken["text"], args=args)
 
-            return correction(spoken["text"], corrected.text) # JsonResponse({'message': corrected.text})
+            return correction(spoken["text"], corrected.text, user_id) # JsonResponse({'message': corrected.text})
         except:
             return JsonResponse({'error': 'File type not allowed'}, status=400)
 
@@ -56,13 +56,15 @@ def upload_file(request):
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
-def correction(original, corrected):
+def correction(original, corrected, user_id):
     original_arr = original.split(".")
     corrected_arr = corrected.split(".")
     corrections_dict = {
         "count": 0,
         "originaltext": original,
         "correctedtext": corrected,
+        "gptresponse": "",
+        "gptaudio": ""
     }
 
     res_index = []
@@ -71,13 +73,25 @@ def correction(original, corrected):
             res_index.append(idx)
 
     corrections_dict['count'] = len(res_index)
-    
+
     for idx, corr_idx in enumerate(res_index):
         corrections_dict[f"{idx + 1}"] = {
             "original": original_arr[corr_idx],
             "corrected": corrected_arr[corr_idx]
         }
+
+    if (user_id):
+        # save to database
+        corrections_dict["gptresponse"] = gpt_conversation(original, user_id)
+        corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
+    else:
+        corrections_dict["gptresponse"] = gpt_corrections(original)
+        corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
+    
     return JsonResponse(corrections_dict)
+
+
+
 
 def test_audio(request):
     # Hard coded file for now
