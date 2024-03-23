@@ -44,8 +44,9 @@ def upload_file(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 def test_audio(request):
-    filename = "testing.flac"
-    ret = pipe("") # file_path = os.path.join(settings.MEDIA_ROOT, filename))
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    file_path = os.path.join(project_root, "uploads", "testing.flac")
+    ret = pipe(file_path, generate_kwargs={"language": "english"})
     return JsonResponse({'message': ret})
 
 # TODO get the file to pass into pipeline and return the result correctly, connect front end to back end(just make sure the post request is working correctly)
