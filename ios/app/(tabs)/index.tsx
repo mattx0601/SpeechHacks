@@ -28,17 +28,19 @@ export default function TabOneScreen() {
   const volume = useSharedValue(0);
 
   useEffect(() => {
-    cancelAnimation(volume);
     if (currentVolume === 0 || recording === undefined) {
       volume.value = 0;
       return;
     }
+    if (currentVolume < -35) {
+      return;
+    }
     volume.value = withSequence(
-      withTiming(Math.abs((currentVolume + 50) / maxVolume) + 1, {
+      withTiming(1.05, {
         duration: 100,
         easing: Easing.linear,
       }),
-      withDelay(100, withTiming(1, { duration: 100, easing: Easing.linear }))
+      withDelay(200, withTiming(1, { duration: 100, easing: Easing.linear }))
     );
   }, [currentVolume]);
 
@@ -149,9 +151,9 @@ export default function TabOneScreen() {
           style={[
             styles.button,
             {
-              backgroundColor: "#dbdbdb",
+              backgroundColor: "#32a852",
               position: "absolute",
-              opacity: 0.2,
+              opacity: 1,
             },
             volumeStyle,
           ]}
