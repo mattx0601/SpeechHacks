@@ -1,3 +1,4 @@
+import random
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
@@ -111,66 +112,6 @@ def gpt_corrections(text):
     retString = "Take a look at the following corrections!" # TODO
     return retString
 
-def test_audio(request):
-    # Hard coded file for now
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    file_path = os.path.join(project_root, "uploads", "grammar.m4a")
-
-    audio = AudioSegment.from_file(file_path, format="m4a")
-    wav_audio_file = os.path.join(project_root, "uploads", "converted_audio.wav")
-    audio.export(wav_audio_file, format="wav")
-
-    # Perform speech recognition on the uploaded file
-    spoken = speech_to_text_pipe(wav_audio_file, generate_kwargs={"language": "english"})
-    # Perform grammar correction on the recognized speech
-    corrected = grammar_correction_pipe.generate_text(spoken["text"], args=args)
-
-
-    return JsonResponse({'message': corrected.text})
-
-dict = {
-    "count": 0,
-    "originaltext": "",
-    "correctedtext": "",
-    
-}
-
-def test_grammar(request):
-    # Hard coded file for now
-    # Perform grammar correction on the recognized speech
-    test = "Many peoples love their country. They're very patriotic."
-    testarr = test.split(".")
-    corrected = (grammar_correction_pipe.generate_text(test, args=args))
-    correctedarr = corrected.text.split(".")
-    res_index = [];
-    for idx, sentence in enumerate(testarr):
-        if (correctedarr[idx] != sentence):
-            res_index.append(idx)
-        
-    dict['count'] = len(res_index)
-    dict['originaltext'] = test
-    dict['correctedtext'] = corrected.text
-    for idx, corr_idx in enumerate(res_index):
-        dict[f"{idx + 1}"] = {
-            "original": testarr[corr_idx],
-            "corrected": correctedarr[corr_idx]
-        }
-    return JsonResponse(dict)
-
-"""
-{
-    "count": 1,
-    "originaltext": ...,
-    "correctedtext": ...,
-    "1": { 
-        "original": ...,
-        "corrected": ...,
-     }
-     ...
-
-}
-
-"""
 
 
 def gpt_conversation(user_input, user_id):
@@ -231,3 +172,72 @@ def gpt_audio(text):
 
     response.with_streaming_response.method(speech_file_path)
     return speech_file_path
+
+
+CONV_STARTERS = ["Hey, how are you doing!", "What's up?", "How's your day going?"]
+
+def conversation_starter(user_id):
+    choice = random.choice(CONV_STARTERS)
+    user_dict[user_id].append(choice)
+    return JsonResponse({'message': choice})
+
+def test_audio(request):
+    # Hard coded file for now
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    file_path = os.path.join(project_root, "uploads", "grammar.m4a")
+
+    audio = AudioSegment.from_file(file_path, format="m4a")
+    wav_audio_file = os.path.join(project_root, "uploads", "converted_audio.wav")
+    audio.export(wav_audio_file, format="wav")
+
+    # Perform speech recognition on the uploaded file
+    spoken = speech_to_text_pipe(wav_audio_file, generate_kwargs={"language": "english"})
+    # Perform grammar correction on the recognized speech
+    corrected = grammar_correction_pipe.generate_text(spoken["text"], args=args)
+
+
+    return JsonResponse({'message': corrected.text})
+
+dict = {
+    "count": 0,
+    "originaltext": "",
+    "correctedtext": "",
+    
+}
+
+def test_grammar(request):
+    # Hard coded file for now
+    # Perform grammar correction on the recognized speech
+    test = "Many peoples love their country. They're very patriotic."
+    testarr = test.split(".")
+    corrected = (grammar_correction_pipe.generate_text(test, args=args))
+    correctedarr = corrected.text.split(".")
+    res_index = [];
+    for idx, sentence in enumerate(testarr):
+        if (correctedarr[idx] != sentence):
+            res_index.append(idx)
+        
+    dict['count'] = len(res_index)
+    dict['originaltext'] = test
+    dict['correctedtext'] = corrected.text
+    for idx, corr_idx in enumerate(res_index):
+        dict[f"{idx + 1}"] = {
+            "original": testarr[corr_idx],
+            "corrected": correctedarr[corr_idx]
+        }
+    return JsonResponse(dict)
+
+"""
+{
+    "count": 1,
+    "originaltext": ...,
+    "correctedtext": ...,
+    "1": { 
+        "original": ...,
+        "corrected": ...,
+     }
+     ...
+
+}
+
+"""
