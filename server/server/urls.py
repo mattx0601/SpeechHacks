@@ -20,7 +20,8 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    path('upload/', views.upload_file, name='upload_file'),
+    path('upload/<str:user_id>/', views.upload_file, name='upload_file'),
+    path('conv_starter/<str:user_id>/', views.conversation_starter, name='conversation_starter'),
     path('test_audio/', views.test_audio, name='test_audio'),
     path('test_grammar/', views.test_grammar, name='test_grammar')
 ]
