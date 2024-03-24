@@ -20,7 +20,6 @@ user_dict = {
 
 speech_to_text_pipe = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3")
 grammar_correction_pipe = HappyTextToText("T5", "vennify/t5-base-grammar-correction")
-text_to_speech_pipe = pipeline("text2text-generation", model ="lmsys/fastchat-t5-3b-v1.0")
 
 args = TTSettings(num_beams=5, min_length=1)
 
