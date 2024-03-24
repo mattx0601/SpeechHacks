@@ -1,7 +1,6 @@
 import React from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Link, Tabs } from "expo-router";
-import { Pressable } from "react-native";
+import { Tabs } from "expo-router";
 
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -27,6 +26,7 @@ export default function TabLayout() {
         headerShown: useClientOnlyValue(false, false),
         tabBarStyle: {
           height: 90,
+          backgroundColor: "transparent",
         },
         tabBarLabelStyle: {
           fontFamily: "CalSans",
@@ -37,16 +37,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+          title: "Analyze",
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="microphone" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="two"
         options={{
-          title: "Recordings",
+          title: "Conversation",
           tabBarIcon: ({ color }) => (
-            <TabBarIcon name="microphone" color={color} />
+            <TabBarIcon name="comments" color={color} />
           ),
         }}
       />
