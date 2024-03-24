@@ -2,6 +2,8 @@
 
 ## Frontend
 
+The frontend is written in Typescript with React Native (expo) along with Reanimated
+
 ## Backend
 
 The backend is built using django and handles generating text, analysis of speech, and tone of voice.
