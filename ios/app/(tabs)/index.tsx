@@ -9,14 +9,15 @@ import Animated, {
   withTiming,
   useAnimatedStyle,
   Easing,
-  withRepeat,
   withSequence,
   withDelay,
   cancelAnimation,
 } from "react-native-reanimated";
-import { router } from "expo-router";
+import { Analysis } from "@/components/Analysis";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 export default function TabOneScreen() {
+  const [data, setData] = useState<any>();
   const backgroundColor = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
   const [recording, setRecording] = useState<Recording | undefined>();
@@ -79,14 +80,54 @@ export default function TabOneScreen() {
   async function stopRecording() {
     console.log("Stopping recording");
     const uri = recording?.getURI(); //this is the audio file we use to send our api call
-    setRecording(undefined);
     await recording?.stopAndUnloadAsync();
     await Audio.setAudioModeAsync({
       allowsRecordingIOS: false,
     });
     console.log(`Recording stored: ${uri}`);
 
-    router.push("/recordings/");
+    setData(123);
+    setRecording(undefined);
+  }
+
+  if (data) {
+    return (
+      <View
+        style={{
+          position: "relative",
+          width: "100%",
+          paddingTop: 70,
+          paddingHorizontal: 20,
+        }}
+      >
+        <Pressable onPress={() => setData(undefined)}>
+          <FontAwesome
+            size={25}
+            name="close"
+            style={{ marginBottom: 10, color: "#dbdbdb" }}
+          />
+        </Pressable>
+        <Analysis
+          setData={setData}
+          data={{
+            count: 2,
+            originaltext: "Many peoples is at risk",
+            correctedtext: "Hi, my name ",
+            gptresponse: "You should say",
+            gptaudio: "",
+            "1": {
+              original: "Many peoples",
+              corrected: "Many people",
+            },
+            "2": {
+              original: "is at risk",
+
+              corrected: "are at people",
+            },
+          }}
+        />
+      </View>
+    );
   }
 
   return (
@@ -128,7 +169,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   button: {
-    borderRadius: 10,
+    borderRadius: 30,
     width: 150,
     height: 80,
     alignItems: "center",

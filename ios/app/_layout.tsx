@@ -74,6 +74,12 @@ function RootLayoutNav() {
           options={{
             headerTitle: "",
             headerBackTitle: "Record",
+            headerStyle: {
+              backgroundColor:
+                colorScheme === "dark"
+                  ? Colors["dark"].background
+                  : Colors["light"].background,
+            },
           }}
         />
       </Stack>
