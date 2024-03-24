@@ -14,8 +14,7 @@ load_dotenv()
 client = OpenAI()
 
 user_dict = {
-    "0" : [],
-    "1" : [],
+    
 }
 
 speech_to_text_pipe = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3")
@@ -64,7 +63,16 @@ def upload_file(request,  user_id=None ):
             # Perform grammar correction on the recognized speech
             corrected = grammar_correction_pipe.generate_text(spoken["text"], args=args)
 
-            return correction(spoken["text"], corrected.text, user_id) # JsonResponse({'message': corrected.text})
+            cor = correction(spoken["text"], corrected.text, user_id) # JsonResponse({'message': corrected.text})
+            response = JsonResponse(cor)
+
+            # Set CORS headers to allow requests from all origins
+            response['Access-Control-Allow-Origin'] = '*'
+            response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response['Access-Control-Allow-Headers'] = 'Content-Type'
+
+            return response
+
         except:
             return JsonResponse({'error': 'File type not allowed'}, status=400)
 
@@ -182,6 +190,7 @@ def gpt_conversation(user_input, user_id):
 
         return chatgpt_response
 
+
 def gpt_audio(text):
     """Generates an audio file from the given text."""
 
@@ -198,13 +207,16 @@ def gpt_audio(text):
 
 CONV_STARTERS = ["Hey, how are you doing!", "What's up?", "How's your day going?"]
 
-def conversation_starter(user_id):
+def conversation_starter(request):
     """Returns a conversation starter and adds it to the user's conversation history."""
-    
-    if (user_id is None):
+
+    user_id = request.GET.get('user_id')
+
+    print(user_id)
+    if user_id is None:
         return JsonResponse({'error': 'User ID not provided'}, status=400)
     choice = random.choice(CONV_STARTERS)
-    user_dict[user_id].append(choice)
+    user_dict[user_id] = [choice]
     audio = gpt_audio(choice)
     return JsonResponse({'message': choice, 'audio': audio})
 
@@ -212,7 +224,16 @@ def conversation_starter(user_id):
 
 """ Test functions below"""
 
+def test_conv_starter(user_id):
+    """Returns a conversation starter and adds it to the user's conversation history."""
 
+    if (user_id is None):
+        return JsonResponse({'error': 'User ID not provided'}, status=400)
+    try: 
+        if (user_dict[user_id]):
+            return JsonResponse(user_dict[user_id])
+    except:
+        return JsonResponse({'error': 'User ID invalid'}, status=400)
 
 def test_audio(request):
     # Hard coded file for now
