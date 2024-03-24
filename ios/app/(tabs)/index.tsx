@@ -91,11 +91,13 @@ export default function TabOneScreen() {
     /*
       MAKE THE API CALL!!!!
     */
-    const res = fetch(`${EXPO_PUBLIC_API_URL}/upload`, {}).then(async (r) => {
-      const body = await r.json();
+    const res = fetch(`${process.env.EXPO_PUBLIC_API_URL}/upload`, {}).then(
+      async (r) => {
+        const body = await r.json();
 
-      setData(body);
-    });
+        setData(body);
+      }
+    );
 
     setRecording(undefined);
   }
