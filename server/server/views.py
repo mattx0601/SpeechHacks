@@ -179,7 +179,8 @@ CONV_STARTERS = ["Hey, how are you doing!", "What's up?", "How's your day going?
 def conversation_starter(user_id):
     choice = random.choice(CONV_STARTERS)
     user_dict[user_id].append(choice)
-    return JsonResponse({'message': choice})
+    audio = gpt_audio(choice)
+    return JsonResponse({'message': choice, 'audio': audio})
 
 def test_audio(request):
     # Hard coded file for now
