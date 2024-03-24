@@ -88,7 +88,15 @@ export default function TabOneScreen() {
     });
     console.log(`Recording stored: ${uri}`);
 
-    setData(123);
+    /*
+      MAKE THE API CALL!!!!
+    */
+    const res = fetch(`${EXPO_PUBLIC_API_URL}/upload`, {}).then(async (r) => {
+      const body = await r.json();
+
+      setData(body);
+    });
+
     setRecording(undefined);
   }
 
@@ -109,25 +117,7 @@ export default function TabOneScreen() {
             style={{ marginBottom: 10, color: "#dbdbdb" }}
           />
         </Pressable>
-        <Analysis
-          setData={setData}
-          data={{
-            count: 2,
-            originaltext: "Many peoples is at risk",
-            correctedtext: "Hi, my name ",
-            gptresponse: "You should say",
-            gptaudio: "",
-            "1": {
-              original: "Many peoples",
-              corrected: "Many people",
-            },
-            "2": {
-              original: "is at risk",
-
-              corrected: "are at people",
-            },
-          }}
-        />
+        <Analysis setData={setData} data={data} />
       </View>
     );
   }
