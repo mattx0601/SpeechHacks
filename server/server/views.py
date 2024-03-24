@@ -1,9 +1,10 @@
 import random
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
+import base64
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 import os
-from transformers import pipeline
+from transformers import pipeline   
 from happytransformer import HappyTextToText, TTSettings
 from pydub import AudioSegment
 from openai import OpenAI 
@@ -158,7 +159,7 @@ def gpt_conversation(user_input, user_id):
         else: 
             chatgpt_response = (response.choices[0].message.content)
         user_dict[user_id].append(chatgpt_response)
-        save_data(user_dict)
+        user_dict = save_data(user_dict)
         return chatgpt_response
     else:
         index = len(user_dict[user_id]) - 4
@@ -182,34 +183,36 @@ def gpt_conversation(user_input, user_id):
         save_data(user_dict)
         return chatgpt_response
 
-def gpt_audio(text):
+def gpt_audio(text, user_id):
     """Generates an audio file from the given text."""
 
-    speech_file_path = Path(__file__).parent / "speech.mp3"
+    speech_file_path = Path(__file__).parent.parent / f"uploads/speech{user_id}-{len(user_dict[user_id])}.mp3"
     response = client.audio.speech.create(
         model="tts-1",
         voice="alloy",
         input=text
     )
-
-    response.with_streaming_response.method(speech_file_path)
-    return speech_file_path
-
+    response.stream_to_file(speech_file_path)
+    return str(speech_file_path)
 
 CONV_STARTERS = ["Hey, how are you doing!", "What's up?", "How's your day going?"]
 
-def conversation_starter(user_id):
+def conversation_starter(request):
     """Returns a conversation starter and adds it to the user's conversation history."""
-    
-    if (user_id is None):
+
+    user_id = request.GET.get('user_id')
+
+    print(user_id)
+    if user_id is None:
         return JsonResponse({'error': 'User ID not provided'}, status=400)
     choice = random.choice(CONV_STARTERS)
     user_dict[user_id] = [choice]
-    # audio = gpt_audio(choice)
-    save_data(user_dict)
-    return JsonResponse({'message': choice, 'audio': ''})
+    file_path_to_audio = gpt_audio(choice, user_id)
+    return JsonResponse({'message': choice, 'audio': file_path_to_audio})
 
-
+def return_audio(request):
+    file_path_to_audio = request.GET.get('file_path_to_audio')
+    return FileResponse(open(file_path_to_audio, 'rb'))
 
 """ Test functions below"""
 

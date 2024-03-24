@@ -23,5 +23,6 @@ urlpatterns = [
     path('upload/', views.upload_file, name='upload_file'),
     path('test_audio/', views.test_audio, name='test_audio'),
     path('test_grammar/', views.test_grammar, name='test_grammar'),
-    path('test_conversation/<int:id>/', views.test_conversation, name='test_conversation'),
+    path('conversation-starter/', views.conversation_starter, name='conversation_starter'),
+    path('get-audio/', views.return_audio, name='get_audio'),
 ]
