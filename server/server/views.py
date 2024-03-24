@@ -27,16 +27,20 @@ args = TTSettings(num_beams=5, min_length=1)
 ALLOWED_EXTENSIONS = {'mp3', 'wav', 'ogg', 'flac', 'aac'}
 
 def file_extension(filename):
+    """Returns the file extension of the given filename."""
     if '.' in filename:
         return filename.rsplit('.', 1)[1].lower()
     return ''
 
 @csrf_exempt
 def index(request):
+    """Returns a simple JSON response with a message."""
     return JsonResponse({'message': 'Hello, world!'})
 
 @csrf_exempt
 def upload_file(request,  user_id=None ):
+    """Handles file uploads and performs speech recognition and grammar correction."""
+
     # For POST methods only
     if request.method == 'POST':
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -55,7 +59,6 @@ def upload_file(request,  user_id=None ):
             audio.export(wav_audio_file, format="wav")
 
             #  Perform speech recognition on the uploaded file
-            #  Perform speech recognition on the uploaded file
             spoken = speech_to_text_pipe(wav_audio_file, generate_kwargs={"language": "english"})
             
             # Perform grammar correction on the recognized speech
@@ -66,13 +69,12 @@ def upload_file(request,  user_id=None ):
         except:
             return JsonResponse({'error': 'File type not allowed'}, status=400)
 
-            
-        else:
-            return JsonResponse({'error': 'File type not allowed'}, status=400)
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 def correction(original, corrected, user_id):
+    """Returns a JSON response with the original and corrected text, the number of corrections, and the GPT response and audio."""
+
     original_arr = original.split(".")
     corrected_arr = corrected.split(".")
     corrections_dict = {
@@ -101,21 +103,40 @@ def correction(original, corrected, user_id):
         corrections_dict["gptresponse"] = gpt_conversation(original, user_id)
         corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
     else:
-        corrections_dict["gptresponse"] = gpt_corrections(original)
+        confidence = confidence_correction(original)
+        corrections_dict["gptresponse"] = gpt_corrections(corrections_dict["count"], confidence)
         corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
 
     return JsonResponse(corrections_dict)
 
+def confidence_correction(text):
+    """Returns a boolean depending on the confidence derived from the speech, this is determined by the number of ums and ahs in the speech."""
+    confidence = True
+    ums = text.count("um")
+    ahs = text.count("ah")
+    dots = text.count("..")
+    if ums + ahs + dots > 1:
+        confidence = False
+    return confidence
 
-def gpt_corrections(text):
+def gpt_corrections(count, confidence): #TODO update text to be more helpful
+    """Returns a string based on the number of grammatical errors in the text."""
 
-    retString = "Take a look at the following corrections!" # TODO
+    if count == 0 and confidence == True:
+        retString = "Your speech had no grammatical errors and you spoke confidently! Great job!"
+    elif count == 0 and confidence == False:
+        retString = "You spoke grammatically correct, but there were many filler words. Try to speak more clearly."
+    elif confidence == True:
+        retString = f"Your tone and confidence were good, but I found {count} errors in the text. Lets take a look at the corrections."
+    else:
+        retString = f"You've used numerous filler words. Aim for a more confident tone in your speech. I've identified {count} errors within the text. Let's examine the corrections together."
     return retString
 
-
+"Try to focus on ennunciating your words clearly and speaking with more confidence."
 
 def gpt_conversation(user_input, user_id):
     """Handles a single turn of conversation with ChatGPT, maintaining context."""
+
     user_dict[user_id].append(user_input)
 
     prompt =  "Respond to the conversation as a normal everyday passing human named Server and keep the conversation going \n"
@@ -163,6 +184,8 @@ def gpt_conversation(user_input, user_id):
         return chatgpt_response
 
 def gpt_audio(text):
+    """Generates an audio file from the given text."""
+
     speech_file_path = Path(__file__).parent / "speech.mp3"
     response = client.audio.speech.create(
         model="tts-1",
@@ -177,10 +200,20 @@ def gpt_audio(text):
 CONV_STARTERS = ["Hey, how are you doing!", "What's up?", "How's your day going?"]
 
 def conversation_starter(user_id):
+    """Returns a conversation starter and adds it to the user's conversation history."""
+    
+    if (user_id is None):
+        return JsonResponse({'error': 'User ID not provided'}, status=400)
     choice = random.choice(CONV_STARTERS)
     user_dict[user_id].append(choice)
     audio = gpt_audio(choice)
     return JsonResponse({'message': choice, 'audio': audio})
+
+
+
+""" Test functions below"""
+
+
 
 def test_audio(request):
     # Hard coded file for now
