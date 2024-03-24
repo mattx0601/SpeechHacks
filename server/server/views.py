@@ -53,8 +53,10 @@ def upload_file(request,  user_id=None ):
             audio.export(wav_audio_file, format="wav")
 
             #  Perform speech recognition on the uploaded file
+            #  Perform speech recognition on the uploaded file
             spoken = speech_to_text_pipe(wav_audio_file, generate_kwargs={"language": "english"})
             
+            # Perform grammar correction on the recognized speech
             # Perform grammar correction on the recognized speech
             corrected = grammar_correction_pipe.generate_text(spoken["text"], args=args)
 
@@ -165,13 +167,6 @@ def test_grammar(request):
 }
 
 """
-
-    for idx, corr_idx in enumerate(res_index):
-        dict[f"{idx + 1}"] = {
-            "original": testarr[corr_idx],
-            "corrected": correctedarr[corr_idx]
-        }
-    return JsonResponse(dict)
 # TODO etc
 
 def gpt_conversation(user_input, user_id):
