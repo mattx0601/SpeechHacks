@@ -28,7 +28,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['0.0.0.0', '127.0.0.1', 'localhost', "http://localhost:4000"]
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:4000',
+    'http://localhost:4000', 'http://[::]:4000'
 ]
 
 # Application definition
@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

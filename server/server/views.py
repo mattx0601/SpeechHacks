@@ -9,12 +9,13 @@ from pydub import AudioSegment
 from openai import OpenAI 
 from pathlib import Path
 from dotenv import load_dotenv 
+import requests
 load_dotenv()
 
 client = OpenAI()
 
 user_dict = {
-    
+    "0" : []
 }
 
 speech_to_text_pipe = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3")
@@ -35,36 +36,53 @@ def index(request):
     """Returns a simple JSON response with a message."""
     return JsonResponse({'message': 'Hello, world!'})
 
-@csrf_exempt
-def upload_file(request,  user_id=None ):
-    """Handles file uploads and performs speech recognition and grammar correction."""
 
+@csrf_exempt
+def upload_file(request):
+    """Handles file uploads and performs speech recognition and grammar correction."""
+    # if request.method == 'POST':
+    #     user_id = request.GET.get('user_id')
+    #     print(user_id)
+    #     response = JsonResponse({'message': 'Hello, world!'})
+    #     response['Access-Control-Allow-Origin'] = '*'
+    #     response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+    #     response['Access-Control-Allow-Headers'] = 'Content-Type'
+    #     return response
+    # return JsonResponse({'error': 'Method not allowed'}, status=405)
     # For POST methods only
+
     if request.method == 'POST':
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
         file = request.FILES.get('file')
 
+        user_id = request.GET.get('user_id')
+
         file_ext = file_extension(file.name)
-        if not file:
-            return JsonResponse({'error': 'No file part'}, status=400)
-        if file.name == '':
-            return JsonResponse({'error': 'No selected file'}, status=400)
-        
+        # if not file:
+        #     print("alive 63")
+        #     return JsonResponse({'error': 'No file part'}, status=400)
+        # if file.name == '':
+        #     print("alive 66")
+        #     return JsonResponse({'error': 'No selected file'}, status=400)
+
         file_path = os.path.join(project_root, "uploads", file.name)
         try:
+
             audio = AudioSegment.from_file(file_path, format=file_ext)
             wav_audio_file = os.path.join(project_root, "uploads", "converted_audio.wav")
             audio.export(wav_audio_file, format="wav")
 
             #  Perform speech recognition on the uploaded file
             spoken = speech_to_text_pipe(wav_audio_file, generate_kwargs={"language": "english"})
-            
+
             # Perform grammar correction on the recognized speech
             # Perform grammar correction on the recognized speech
             corrected = grammar_correction_pipe.generate_text(spoken["text"], args=args)
 
             cor = correction(spoken["text"], corrected.text, user_id) # JsonResponse({'message': corrected.text})
-            response = JsonResponse(cor)
+            print(str(cor))
+            response = cor
 
             # Set CORS headers to allow requests from all origins
             response['Access-Control-Allow-Origin'] = '*'
@@ -73,10 +91,12 @@ def upload_file(request,  user_id=None ):
 
             return response
 
-        except:
+        except Exception as e:
+
             return JsonResponse({'error': 'File type not allowed'}, status=400)
 
     else:
+
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 def correction(original, corrected, user_id):
@@ -107,12 +127,14 @@ def correction(original, corrected, user_id):
 
     if (user_id):
         # save to database
+
         corrections_dict["gptresponse"] = gpt_conversation(original, user_id)
-        corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
+        # corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
     else:
+
         confidence = confidence_correction(original)
         corrections_dict["gptresponse"] = gpt_corrections(corrections_dict["count"], confidence)
-        corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
+        # corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
 
     return JsonResponse(corrections_dict)
 
