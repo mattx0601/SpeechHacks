@@ -21,8 +21,15 @@ from . import views
 urlpatterns = [
     path('', views.index, name='index'),
     path('upload/', views.upload_file, name='upload_file'),
+<<<<<<< HEAD
     path('test_audio/', views.test_audio, name='test_audio'),
     path('test_grammar/', views.test_grammar, name='test_grammar'),
     path('conversation-starter/', views.conversation_starter, name='conversation_starter'),
     path('get-audio/', views.return_audio, name='get_audio'),
+=======
+    path('conversation_starter/', views.conversation_starter, name='conversation_starter'),
+    path('test_audio/', views.test_audio, name='test_audio'),
+    path('test_grammar/', views.test_grammar, name='test_grammar'),
+    path('test_conv/', views.test_conv_starter, name='test_conv_starter'),
+>>>>>>> db92d0561f0b8f1dfa52c92e5326c8c876145876
 ]

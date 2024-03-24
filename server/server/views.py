@@ -1,3 +1,4 @@
+import json
 import random
 from django.http import JsonResponse, FileResponse
 import base64
@@ -10,6 +11,7 @@ from pydub import AudioSegment
 from openai import OpenAI 
 from pathlib import Path
 from dotenv import load_dotenv 
+import requests
 import json 
 
 with open("../server/server/database.json", 'r') as file:
@@ -18,6 +20,9 @@ with open("../server/server/database.json", 'r') as file:
 load_dotenv()
 
 client = OpenAI()
+
+with open("../server/server/database.json", 'r') as file:
+    user_dict = json.load(file)
 
 speech_to_text_pipe = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3")
 grammar_correction_pipe = HappyTextToText("T5", "vennify/t5-base-grammar-correction")
@@ -37,39 +42,76 @@ def index(request):
     """Returns a simple JSON response with a message."""
     return JsonResponse({'message': 'Hello, world!'})
 
-@csrf_exempt
-def upload_file(request,  user_id=None ):
-    """Handles file uploads and performs speech recognition and grammar correction."""
+def save_data(data):
+    try:
+        with open('database.json', 'r') as file:
+            existing_data = json.load(file)
+    except FileNotFoundError:
+        existing_data = {}
+    merged_data = {**existing_data, **data}
+    with open("../server/server/database.json", 'w') as file:
+        json.dump(merged_data, file, indent=4)
 
+@csrf_exempt
+def upload_file(request):
+    """Handles file uploads and performs speech recognition and grammar correction."""
+    # if request.method == 'POST':
+    #     user_id = request.GET.get('user_id')
+    #     print(user_id)
+    #     response = JsonResponse({'message': 'Hello, world!'})
+    #     response['Access-Control-Allow-Origin'] = '*'
+    #     response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+    #     response['Access-Control-Allow-Headers'] = 'Content-Type'
+    #     return response
+    # return JsonResponse({'error': 'Method not allowed'}, status=405)
     # For POST methods only
+
     if request.method == 'POST':
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
         file = request.FILES.get('file')
 
+        user_id = request.GET.get('user_id')
+
         file_ext = file_extension(file.name)
-        if not file:
-            return JsonResponse({'error': 'No file part'}, status=400)
-        if file.name == '':
-            return JsonResponse({'error': 'No selected file'}, status=400)
-        
+        # if not file:
+        #     print("alive 63")
+        #     return JsonResponse({'error': 'No file part'}, status=400)
+        # if file.name == '':
+        #     print("alive 66")
+        #     return JsonResponse({'error': 'No selected file'}, status=400)
+
         file_path = os.path.join(project_root, "uploads", file.name)
         try:
+
             audio = AudioSegment.from_file(file_path, format=file_ext)
             wav_audio_file = os.path.join(project_root, "uploads", "converted_audio.wav")
             audio.export(wav_audio_file, format="wav")
 
             #  Perform speech recognition on the uploaded file
             spoken = speech_to_text_pipe(wav_audio_file, generate_kwargs={"language": "english"})
-            
+
             # Perform grammar correction on the recognized speech
             # Perform grammar correction on the recognized speech
             corrected = grammar_correction_pipe.generate_text(spoken["text"], args=args)
 
-            return correction(spoken["text"], corrected.text, user_id) # JsonResponse({'message': corrected.text})
-        except:
+            cor = correction(spoken["text"], corrected.text, user_id) # JsonResponse({'message': corrected.text})
+            print(str(cor))
+            response = cor
+
+            # Set CORS headers to allow requests from all origins
+            response['Access-Control-Allow-Origin'] = '*'
+            response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response['Access-Control-Allow-Headers'] = 'Content-Type'
+
+            return response
+
+        except Exception as e:
+
             return JsonResponse({'error': 'File type not allowed'}, status=400)
 
     else:
+
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 def correction(original, corrected, user_id):
@@ -100,12 +142,14 @@ def correction(original, corrected, user_id):
 
     if (user_id):
         # save to database
+
         corrections_dict["gptresponse"] = gpt_conversation(original, user_id)
-        corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
+        # corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
     else:
+
         confidence = confidence_correction(original)
         corrections_dict["gptresponse"] = gpt_corrections(corrections_dict["count"], confidence)
-        corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
+        # corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
 
     return JsonResponse(corrections_dict)
 
@@ -138,6 +182,7 @@ def gpt_conversation(user_input, user_id):
     """Handles a single turn of conversation with ChatGPT, maintaining context."""
 
     user_dict[user_id].append(user_input)
+    save_data(user_dict)
 
     prompt =  "Respond to the conversation as a normal everyday passing human named Server and keep the conversation going \n"
     if len(user_dict[user_id]) <= 3:
@@ -159,7 +204,8 @@ def gpt_conversation(user_input, user_id):
         else: 
             chatgpt_response = (response.choices[0].message.content)
         user_dict[user_id].append(chatgpt_response)
-        user_dict = save_data(user_dict)
+        save_data(user_dict)
+
         return chatgpt_response
     else:
         index = len(user_dict[user_id]) - 4
@@ -179,11 +225,13 @@ def gpt_conversation(user_input, user_id):
             chatgpt_response = (response.choices[0].message.content)[6:]
         else:
             chatgpt_response = (response.choices[0].message.content) # Server: I am well.
-        user_dict[user_id].append(chatgpt_response)
-        save_data(user_dict)
+            user_dict[user_id].append(chatgpt_response)
+            save_data(user_dict)
+
         return chatgpt_response
 
-def gpt_audio(text, user_id):
+
+def gpt_audio(text):
     """Generates an audio file from the given text."""
 
     speech_file_path = Path(__file__).parent.parent / f"uploads/speech{user_id}-{len(user_dict[user_id])}.mp3"
@@ -198,6 +246,7 @@ def gpt_audio(text, user_id):
 CONV_STARTERS = ["Hey, how are you doing!", "What's up?", "How's your day going?"]
 
 def conversation_starter(request):
+def conversation_starter(request):
     """Returns a conversation starter and adds it to the user's conversation history."""
 
     user_id = request.GET.get('user_id')
@@ -207,6 +256,7 @@ def conversation_starter(request):
         return JsonResponse({'error': 'User ID not provided'}, status=400)
     choice = random.choice(CONV_STARTERS)
     user_dict[user_id] = [choice]
+    save_data(user_dict)
     file_path_to_audio = gpt_audio(choice, user_id)
     return JsonResponse({'message': choice, 'audio': file_path_to_audio})
 
@@ -216,6 +266,16 @@ def return_audio(request):
 
 """ Test functions below"""
 
+def test_conv_starter(user_id):
+    """Returns a conversation starter and adds it to the user's conversation history."""
+
+    if (user_id is None):
+        return JsonResponse({'error': 'User ID not provided'}, status=400)
+    try: 
+        if (user_dict[user_id]):
+            return JsonResponse(user_dict[user_id])
+    except:
+        return JsonResponse({'error': 'User ID invalid'}, status=400)
 
 def test_audio(request):
     # Hard coded file for now
