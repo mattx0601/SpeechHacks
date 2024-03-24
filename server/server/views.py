@@ -16,6 +16,7 @@ user_dict = {
     "0" : [],
     "1" : [],
 }
+
 speech_to_text_pipe = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3")
 grammar_correction_pipe = HappyTextToText("T5", "vennify/t5-base-grammar-correction")
 text_to_speech_pipe = pipeline("text2text-generation", model ="lmsys/fastchat-t5-3b-v1.0")
@@ -101,11 +102,14 @@ def correction(original, corrected, user_id):
     else:
         corrections_dict["gptresponse"] = gpt_corrections(original)
         corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
-    
+
     return JsonResponse(corrections_dict)
 
 
+def gpt_corrections(text):
 
+    retString = "Take a look at the following corrections!" # TODO
+    return retString
 
 def test_audio(request):
     # Hard coded file for now
@@ -167,7 +171,7 @@ def test_grammar(request):
 }
 
 """
-# TODO etc
+
 
 def gpt_conversation(user_input, user_id):
     """Handles a single turn of conversation with ChatGPT, maintaining context."""
@@ -216,8 +220,8 @@ def gpt_conversation(user_input, user_id):
         user_dict[user_id].append(chatgpt_response)
 
         return chatgpt_response
-    
-def text_to_audio(text):
+
+def gpt_audio(text):
     speech_file_path = Path(__file__).parent / "speech.mp3"
     response = client.audio.speech.create(
         model="tts-1",
