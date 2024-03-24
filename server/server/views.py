@@ -1,3 +1,4 @@
+import json
 import random
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -14,9 +15,8 @@ load_dotenv()
 
 client = OpenAI()
 
-user_dict = {
-    "0" : []
-}
+with open("../server/server/database.json", 'r') as file:
+    user_dict = json.load(file)
 
 speech_to_text_pipe = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3")
 grammar_correction_pipe = HappyTextToText("T5", "vennify/t5-base-grammar-correction")
@@ -36,6 +36,15 @@ def index(request):
     """Returns a simple JSON response with a message."""
     return JsonResponse({'message': 'Hello, world!'})
 
+def save_data(data):
+    try:
+        with open('database.json', 'r') as file:
+            existing_data = json.load(file)
+    except FileNotFoundError:
+        existing_data = {}
+    merged_data = {**existing_data, **data}
+    with open("../server/server/database.json", 'w') as file:
+        json.dump(merged_data, file, indent=4)
 
 @csrf_exempt
 def upload_file(request):
@@ -167,6 +176,7 @@ def gpt_conversation(user_input, user_id):
     """Handles a single turn of conversation with ChatGPT, maintaining context."""
 
     user_dict[user_id].append(user_input)
+    save_data(user_dict)
 
     prompt =  "Respond to the conversation as a normal everyday passing human named Server and keep the conversation going \n"
     if len(user_dict[user_id]) <= 3:
@@ -188,6 +198,7 @@ def gpt_conversation(user_input, user_id):
         else: 
             chatgpt_response = (response.choices[0].message.content)
         user_dict[user_id].append(chatgpt_response)
+        save_data(user_dict)
 
         return chatgpt_response
     else:
@@ -208,7 +219,8 @@ def gpt_conversation(user_input, user_id):
             chatgpt_response = (response.choices[0].message.content)[6:]
         else:
             chatgpt_response = (response.choices[0].message.content) # Server: I am well.
-        user_dict[user_id].append(chatgpt_response)
+            user_dict[user_id].append(chatgpt_response)
+            save_data(user_dict)
 
         return chatgpt_response
 
@@ -239,8 +251,9 @@ def conversation_starter(request):
         return JsonResponse({'error': 'User ID not provided'}, status=400)
     choice = random.choice(CONV_STARTERS)
     user_dict[user_id] = [choice]
-    audio = gpt_audio(choice)
-    return JsonResponse({'message': choice, 'audio': audio})
+    # audio = gpt_audio(choice)
+    save_data(user_dict)
+    return JsonResponse({'message': choice, 'audio': "audio"})
 
 
 
