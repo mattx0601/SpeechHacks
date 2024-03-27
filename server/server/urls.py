@@ -25,4 +25,6 @@ urlpatterns = [
     path('test_audio/', views.test_audio, name='test_audio'),
     path('test_grammar/', views.test_grammar, name='test_grammar'),
     path('test_conv/', views.test_conv_starter, name='test_conv_starter'),
+    path('get-audio/', views.return_audio, name='get_audio'),
+
 ]
