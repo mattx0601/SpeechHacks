@@ -115,10 +115,10 @@ export default function TabOneScreen() {
       formData.append("file", response_as_file, 'recoring.m4a');
     console.log("FORM DATA IS " + JSON.stringify(formData))
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}upload/?user_id=3`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/upload/?user_id=0`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'multipart/form-data', // Use multipart/form-data for uploading files
+          // 'Content-Type': 'multipart/form-data',
           // Include additional headers if necessary
         },
         body: formData,

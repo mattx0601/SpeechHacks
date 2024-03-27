@@ -28,7 +28,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['0.0.0.0', '127.0.0.1', 'localhost', "http://localhost:4000"]
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:4000', 'http://[::]:4000'
+    'http://localhost:4000', 'http://[::]:4000', 'http://localhost:8081', 'exp://10.132.209.230:8081'
 ]
 
 # Application definition

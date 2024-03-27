@@ -18,6 +18,7 @@ client = OpenAI()
 with open("../server/server/database.json", 'r') as file:
     user_dict = json.load(file)
 
+
 speech_to_text_pipe = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3")
 grammar_correction_pipe = HappyTextToText("T5", "vennify/t5-base-grammar-correction")
 
@@ -64,6 +65,8 @@ def upload_file(request):
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
         file = request.FILES.get('file')
+        # print("alive 57")
+        print(file)
 
         user_id = request.GET.get('user_id')
 
@@ -76,32 +79,40 @@ def upload_file(request):
         #     return JsonResponse({'error': 'No selected file'}, status=400)
 
         file_path = os.path.join(project_root, "uploads", file.name)
+        with open(file_path, 'wb') as destination:
+            for chunk in file.chunks():
+                destination.write(chunk)
         try:
 
-            audio = AudioSegment.from_file(file_path, format=file_ext)
-            wav_audio_file = os.path.join(project_root, "uploads", "converted_audio.wav")
-            audio.export(wav_audio_file, format="wav")
+            # audio = AudioSegment.from_file(file_path, format=file_ext)
+            # wav_audio_file = os.path.join(project_root, "uploads", file.name + ".wav")
+            # audio.export(wav_audio_file, format="wav")
 
             #  Perform speech recognition on the uploaded file
-            spoken = speech_to_text_pipe(wav_audio_file, generate_kwargs={"language": "english"})
+            spoken = speech_to_text_pipe(file_path, generate_kwargs={"language": "english"})
 
             # Perform grammar correction on the recognized speech
             # Perform grammar correction on the recognized speech
+            # print(str(spoken))
+            # print(spoken["text"])
+            # print("text: " + spoken["text"])
             corrected = grammar_correction_pipe.generate_text(spoken["text"], args=args)
-
+            # print("alive 92")
             cor = correction(spoken["text"], corrected.text, user_id) # JsonResponse({'message': corrected.text})
-            print(str(cor))
-            response = cor
+            # print("alive 94")
+            # print(str(cor))
 
+            # print("alive 96")
             # Set CORS headers to allow requests from all origins
-            response['Access-Control-Allow-Origin'] = '*'
-            response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-            response['Access-Control-Allow-Headers'] = 'Content-Type'
-
-            return response
+            cor['Access-Control-Allow-Origin'] = '*'
+            cor['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            cor['Access-Control-Allow-Headers'] = 'Content-Type'
+            # print(str(cor))
+            return JsonResponse(cor)
 
         except Exception as e:
-
+            # print("alive 115")
+            print(e)
             return JsonResponse({'error': 'File type not allowed'}, status=400)
 
     else:
@@ -145,7 +156,7 @@ def correction(original, corrected, user_id):
         corrections_dict["gptresponse"] = gpt_corrections(corrections_dict["count"], confidence)
         # corrections_dict["gptaudio"] = gpt_audio(corrections_dict["gptresponse"])
 
-    return JsonResponse(corrections_dict)
+    return corrections_dict
 
 def confidence_correction(text):
     """Returns a boolean depending on the confidence derived from the speech, this is determined by the number of ums and ahs in the speech."""
