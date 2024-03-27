@@ -2,7 +2,7 @@ import { Pressable, StyleSheet } from "react-native";
 import { Audio } from "expo-av";
 import { Text, View, useThemeColor } from "@/components/Themed";
 import { useEffect, useState } from "react";
-import { Recording, RecordingStatus } from "expo-av/build/Audio";
+import { IOSAudioQuality, IOSOutputFormat, Recording, RecordingStatus } from "expo-av/build/Audio";
 import Colors from "@/constants/Colors";
 import Animated, {
   useSharedValue,
@@ -15,6 +15,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { Analysis } from "@/components/Analysis";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import * as FileSystem from 'expo-file-system';
+
+
 
 export default function TabOneScreen() {
   const [data, setData] = useState<any>();
@@ -26,7 +29,7 @@ export default function TabOneScreen() {
 
   const maxVolume = 100;
   const volume = useSharedValue(0);
-
+  
   useEffect(() => {
     if (currentVolume === 0 || recording === undefined) {
       volume.value = 0;
@@ -69,6 +72,17 @@ export default function TabOneScreen() {
         {
           ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
           isMeteringEnabled: true,
+          ios: {
+            extension: '.m4a',
+            outputFormat: IOSOutputFormat.MPEG4AAC,
+            audioQuality: IOSAudioQuality.MAX,
+            sampleRate: 44100,
+            numberOfChannels: 2,
+            bitRate: 128000,
+            linearPCMBitDepth: 16,
+            linearPCMIsBigEndian: false,
+            linearPCMIsFloat: false,            
+          }
         },
         updateStatus
       );
@@ -81,24 +95,46 @@ export default function TabOneScreen() {
 
   async function stopRecording() {
     console.log("Stopping recording");
-    const uri = recording?.getURI(); //this is the audio file we use to send our api call
     await recording?.stopAndUnloadAsync();
     await Audio.setAudioModeAsync({
       allowsRecordingIOS: false,
     });
+    const uri = String(recording?.getURI());
+  
     console.log(`Recording stored: ${uri}`);
 
     /*
       MAKE THE API CALL!!!!
     */
-    const res = fetch(`${process.env.EXPO_PUBLIC_API_URL}/upload`, {}).then(
-      async (r) => {
-        const body = await r.json();
 
-        setData(body);
+      const response = await fetch(uri);
+      const response_ext = uri.split('.').pop()
+      const blobData = await response.blob();
+      const response_as_file = new File([blobData], "recording." + response_ext)
+      const formData = new FormData();
+      formData.append("file", response_as_file, 'recoring.m4a');
+    console.log("FORM DATA IS " + JSON.stringify(formData))
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}upload/?user_id=3`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data', // Use multipart/form-data for uploading files
+          // Include additional headers if necessary
+        },
+        body: formData,
+      });
+  
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
       }
-    );
-
+  
+      const body = await response.json();
+      console.log("Response from server:", body);
+      setData(body);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+    }
+  
     setRecording(undefined);
   }
 
