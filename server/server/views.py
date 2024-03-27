@@ -246,7 +246,6 @@ def gpt_audio(text):
 CONV_STARTERS = ["Hey, how are you doing!", "What's up?", "How's your day going?"]
 
 def conversation_starter(request):
-def conversation_starter(request):
     """Returns a conversation starter and adds it to the user's conversation history."""
 
     user_id = request.GET.get('user_id')
