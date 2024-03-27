@@ -1,6 +1,6 @@
 import json
 import random
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 import os
