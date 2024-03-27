@@ -225,18 +225,21 @@ def gpt_conversation(user_input, user_id):
         return chatgpt_response
 
 
-def gpt_audio(text):
+def gpt_audio(text, user_id):
     """Generates an audio file from the given text."""
 
-    speech_file_path = Path(__file__).parent / "speech.mp3"
+    speech_file_path = Path(__file__).parent.parent / f"uploads/speech{user_id}-{len(user_dict[user_id])}.mp3"
     response = client.audio.speech.create(
         model="tts-1",
         voice="alloy",
         input=text
     )
+    response.stream_to_file(speech_file_path)
+    return str(speech_file_path)
 
-    response.with_streaming_response.method(speech_file_path)
-    return speech_file_path
+def return_audio(request):
+    file_path_to_audio = request.GET.get('file_path_to_audio')
+    return FileResponse(open(file_path_to_audio, 'rb'))
 
 
 CONV_STARTERS = ["Hey, how are you doing!", "What's up?", "How's your day going?"]
