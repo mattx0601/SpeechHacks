@@ -231,7 +231,7 @@ def gpt_conversation(user_input, user_id):
         return chatgpt_response
 
 
-def gpt_audio(text):
+def gpt_audio(text, user_id):
     """Generates an audio file from the given text."""
 
     speech_file_path = Path(__file__).parent.parent / f"uploads/speech{user_id}-{len(user_dict[user_id])}.mp3"
