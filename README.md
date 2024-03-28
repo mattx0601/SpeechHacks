@@ -1,4 +1,6 @@
 # SpeechHacks
+2nd place winner in microhacks
+SpeechHacks is a mobile application that allows users to upload/record audio and have it analyzed for grammar, tone, and word choice. You can also have a vocal conversation with a bot and after the conversation is over we take the user into a duolingo style menu to go over what they could improve on.
 
 ## Frontend
 
