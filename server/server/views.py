@@ -10,7 +10,9 @@ from pydub import AudioSegment
 from openai import OpenAI 
 from pathlib import Path
 from dotenv import load_dotenv 
-import requests
+import io
+from pydub import AudioSegment
+
 load_dotenv()
 
 client = OpenAI()
@@ -18,11 +20,8 @@ client = OpenAI()
 with open("../server/server/database.json", 'r') as file:
     user_dict = json.load(file)
 
-
 speech_to_text_pipe = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3")
-grammar_correction_pipe = HappyTextToText("T5", "vennify/t5-base-grammar-correction")
-
-args = TTSettings(num_beams=5, min_length=1)
+grammar_correction_pipe = pipeline("text2text-generation", model="vennify/t5-base-grammar-correction")
 
 ALLOWED_EXTENSIONS = {'mp3', 'wav', 'ogg', 'flac', 'aac'}
 
@@ -47,6 +46,15 @@ def save_data(data):
     with open("../server/server/database.json", 'w') as file:
         json.dump(merged_data, file, indent=4)
 
+def convert_blob_to_wav(blob_data, file_path):
+    try:
+        audio_segment = AudioSegment.from_file(io.BytesIO(blob_data), format='m4a')  # Assuming M4A input
+        audio_segment.export(file_path, format='wav')
+        return True
+    except Exception as e:
+        print(f"Conversion error: {e}")
+        return False
+    
 @csrf_exempt
 def upload_file(request):
     """Handles file uploads and performs speech recognition and grammar correction."""
@@ -62,26 +70,14 @@ def upload_file(request):
     # For POST methods only
 
     if request.method == 'POST':
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  
+        file_path = os.path.join(project_root, "uploads", "recording.wav")
 
-        file = request.FILES.get('file')
-        # print("alive 57")
-        print(file)
-
+        blob_data = request.body
+        convert_blob_to_wav(blob_data, file_path)
+        if not blob_data:
+            return JsonResponse({'error': 'Missing blob data'}, status=400)
         user_id = request.GET.get('user_id')
-
-        file_ext = file_extension(file.name)
-        # if not file:
-        #     print("alive 63")
-        #     return JsonResponse({'error': 'No file part'}, status=400)
-        # if file.name == '':
-        #     print("alive 66")
-        #     return JsonResponse({'error': 'No selected file'}, status=400)
-
-        file_path = os.path.join(project_root, "uploads", file.name)
-        with open(file_path, 'wb') as destination:
-            for chunk in file.chunks():
-                destination.write(chunk)
         try:
 
             # audio = AudioSegment.from_file(file_path, format=file_ext)
@@ -90,15 +86,19 @@ def upload_file(request):
 
             #  Perform speech recognition on the uploaded file
             spoken = speech_to_text_pipe(file_path, generate_kwargs={"language": "english"})
-
+            print('1')
             # Perform grammar correction on the recognized speech
             # Perform grammar correction on the recognized speech
             # print(str(spoken))
             # print(spoken["text"])
             # print("text: " + spoken["text"])
-            corrected = grammar_correction_pipe.generate_text(spoken["text"], args=args)
+            print('2')
+            corrected = grammar_correction_pipe(spoken["text"])[0]['generated_text']
+            print(corrected)
             # print("alive 92")
-            cor = correction(spoken["text"], corrected.text, user_id) # JsonResponse({'message': corrected.text})
+            cor = correction(spoken["text"], corrected, user_id) # JsonResponse({'message': corrected.text})
+            print('3')
+
             # print("alive 94")
             # print(str(cor))
 
@@ -124,6 +124,8 @@ def correction(original, corrected, user_id):
 
     original_arr = original.split(".")
     corrected_arr = corrected.split(".")
+    
+    print(corrected_arr)
     corrections_dict = {
         "count": 0,
         "originaltext": original,
@@ -134,7 +136,7 @@ def correction(original, corrected, user_id):
 
     res_index = []
     for idx, sentence in enumerate(original_arr):
-        if (corrected_arr[idx] != sentence):
+        if (corrected_arr[idx] != sentence and corrected_arr[idx] != ""):
             res_index.append(idx)
 
     corrections_dict['count'] = len(res_index)
@@ -220,10 +222,13 @@ def gpt_conversation(user_input, user_id):
             else:
                 prompt += f"User: {message}\n"
             index +=1
+        print('testing testing testing chat')
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",  # Adjust the model as needed
             messages=[{"role": "system", "content": prompt}]
         )
+        print('chat successful')
+
         if "Server:" in response.choices[0].message.content:
             chatgpt_response = (response.choices[0].message.content)[8:]
         elif "User:" in response.choices[0].message.content:
@@ -296,6 +301,7 @@ def test_audio(request):
     # Perform speech recognition on the uploaded file
     spoken = speech_to_text_pipe(wav_audio_file, generate_kwargs={"language": "english"})
     # Perform grammar correction on the recognized speech
+    args = TTSettings(num_beams=5, min_length=1)
     corrected = grammar_correction_pipe.generate_text(spoken["text"], args=args)
 
 

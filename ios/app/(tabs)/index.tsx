@@ -110,6 +110,7 @@ export default function TabOneScreen() {
       const response = await fetch(uri);
       const response_ext = uri.split('.').pop()
       const blobData = await response.blob();
+      console.log(`Blob data is ${blobData}`)
       const response_as_file = new File([blobData], "recording." + response_ext)
       const formData = new FormData();
       formData.append("file", response_as_file, 'recoring.m4a');
@@ -118,10 +119,10 @@ export default function TabOneScreen() {
       const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/upload/?user_id=0`, {
         method: 'POST',
         headers: {
-          // 'Content-Type': 'multipart/form-data',
+          'Content-Type': 'audio/mp3',
           // Include additional headers if necessary
         },
-        body: formData,
+        body: blobData,
       });
   
       if (!response.ok) {
